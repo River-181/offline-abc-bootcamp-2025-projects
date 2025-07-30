@@ -1,0 +1,192 @@
+/* 종이 질감 배경 */
+.paper-texture {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: 
+        radial-gradient(circle at 20% 50%, rgba(255, 255, 255, 0.2) 2px, transparent 2px),
+        radial-gradient(circle at 40% 20%, rgba(255, 255, 255, 0.15) 1px, transparent 1px),
+        radial-gradient(circle at 90% 80%, rgba(255, 255, 255, 0.1) 1px, transparent 1px),
+        radial-gradient(circle at 70% 30%, rgba(255, 255, 255, 0.2) 1px, transparent 1px),
+        linear-gradient(45deg, transparent 24%, rgba(255, 255, 255, 0.05) 25%, rgba(255, 255, 255, 0.05) 26%, transparent 27%, transparent 74%, rgba(255, 255, 255, 0.05) 75%, rgba(255, 255, 255, 0.05) 76%, transparent 77%);
+    background-size: 150px 150px, 200px 200px, 180px 180px, 220px 220px, 60px 60px;
+    pointer-events: none;
+    z-index: 1;
+}
+
+/* 커스텀 스크롤바 */
+.custom-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: #d97706 #fef3c7;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+    width: 8px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: #fef3c7;
+    border-radius: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #d97706;
+    border-radius: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #b45309;
+}
+
+/* 옷 아이템 스타일 */
+.cloth-item {
+    @apply bg-white rounded-lg p-3 border-2 border-transparent hover:border-amber-300 cursor-pointer transition-all duration-200 transform hover:scale-105 hover:shadow-lg;
+}
+
+.cloth-item:hover {
+    animation: gentle-bounce 0.6s ease-in-out;
+}
+
+@keyframes gentle-bounce {
+    0%, 100% { transform: scale(1.05) translateY(0); }
+    50% { transform: scale(1.05) translateY(-2px); }
+}
+
+/* 캔버스 컨테이너 */
+#fittingCanvas {
+    border-radius: 8px;
+}
+
+/* 파일 업로드 영역 호버 효과 */
+label[for="photoUpload"]:hover {
+    animation: wobble 0.8s ease-in-out;
+}
+
+@keyframes wobble {
+    0%, 100% { transform: rotate(0deg); }
+    25% { transform: rotate(-1deg); }
+    75% { transform: rotate(1deg); }
+}
+
+/* 버튼 호버 효과 */
+button {
+    position: relative;
+    overflow: hidden;
+}
+
+button:before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: left 0.5s;
+}
+
+button:hover:before {
+    left: 100%;
+}
+
+/* 손글씨 효과 강화 */
+.font-handwrite {
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+/* 종이 찢어진 가장자리 효과 */
+.torn-edge {
+    position: relative;
+}
+
+.torn-edge:before {
+    content: '';
+    position: absolute;
+    top: -5px;
+    left: 0;
+    right: 0;
+    height: 10px;
+    background: repeating-linear-gradient(
+        90deg,
+        transparent,
+        transparent 5px,
+        rgba(245, 158, 11, 0.1) 5px,
+        rgba(245, 158, 11, 0.1) 10px
+    );
+}
+
+/* 로딩 애니메이션 */
+.loading-dots {
+    display: inline-block;
+}
+
+.loading-dots:after {
+    content: '...';
+    animation: dots 1.5s steps(4, end) infinite;
+}
+
+@keyframes dots {
+    0%, 20% { content: '.'; }
+    40% { content: '..'; }
+    60%, 100% { content: '...'; }
+}
+
+/* 툴팁 스타일 */
+.tooltip {
+    position: relative;
+}
+
+.tooltip:hover:after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    white-space: nowrap;
+    z-index: 1000;
+}
+
+/* 반응형 디자인 개선 */
+@media (max-width: 768px) {
+    .container {
+        padding: 1rem;
+    }
+    
+    #fittingCanvas {
+        width: 100%;
+        height: auto;
+        max-width: 350px;
+        max-height: 490px;
+    }
+    
+    .cloth-item {
+        padding: 0.5rem;
+    }
+}
+
+/* 접근성 개선 */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+/* 다크모드 지원 */
+@media (prefers-color-scheme: dark) {
+    .paper-texture {
+        background-image: 
+            radial-gradient(circle at 20% 50%, rgba(0, 0, 0, 0.1) 2px, transparent 2px),
+            radial-gradient(circle at 40% 20%, rgba(0, 0, 0, 0.08) 1px, transparent 1px),
+            radial-gradient(circle at 90% 80%, rgba(0, 0, 0, 0.05) 1px, transparent 1px),
+            radial-gradient(circle at 70% 30%, rgba(0, 0, 0, 0.1) 1px, transparent 1px);
+    }
+}

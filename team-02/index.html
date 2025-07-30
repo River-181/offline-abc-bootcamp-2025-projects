@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>가상 피팅룸 - Virtual Fitting Room</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Fabric.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.0/fabric.min.js"></script>
+    
+    <!-- Google Fonts - 손글씨 폰트 -->
+    <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;600;700&family=Kalam:wght@300;400;700&display=swap" rel="stylesheet">
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="css/style.css">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        'handwrite': ['Caveat', 'cursive'],
+                        'notebook': ['Kalam', 'cursive']
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-amber-50 to-orange-100 font-notebook">
+    <!-- 종이 질감 배경 오버레이 -->
+    <div class="paper-texture"></div>
+    
+    <div class="container mx-auto px-4 py-8 relative z-10">
+        <!-- 헤더 -->
+        <header class="text-center mb-8">
+            <h1 class="text-5xl font-handwrite font-bold text-amber-800 mb-2 transform -rotate-1">
+                Virtual Fitting Room
+            </h1>
+            <p class="text-lg text-amber-700 font-notebook transform rotate-1">
+                나만의 가상 옷장에서 스타일링을 해보세요! ✨
+            </p>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- 좌측: 사진 업로드 & 옷장 -->
+            <div class="lg:col-span-1 space-y-6">
+                <!-- 사진 업로드 섹션 -->
+                <div class="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg p-6 border-2 border-amber-200">
+                    <h2 class="text-2xl font-handwrite font-semibold text-amber-800 mb-4 flex items-center">
+                        📸 전신 사진 업로드
+                    </h2>
+                    
+                    <div class="space-y-4">
+                        <input 
+                            type="file" 
+                            id="photoUpload" 
+                            accept="image/*" 
+                            class="hidden"
+                        >
+                        <label 
+                            for="photoUpload" 
+                            class="block w-full p-4 border-2 border-dashed border-amber-300 rounded-xl text-center cursor-pointer hover:border-amber-400 hover:bg-amber-50 transition-all"
+                        >
+                            <div class="text-4xl mb-2">📱</div>
+                            <div class="text-sm font-notebook text-amber-700">
+                                클릭해서 사진을 선택하세요
+                            </div>
+                        </label>
+                        
+                        <button 
+                            id="removeBackground" 
+                            class="w-full bg-red-500 hover:bg-red-600 text-white py-2 px-4 rounded-lg font-notebook transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            disabled
+                        >
+                            🗑️ 배경 이미지 제거
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 옷장 섹션 -->
+                <div class="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg p-6 border-2 border-amber-200">
+                    <h2 class="text-2xl font-handwrite font-semibold text-amber-800 mb-4 flex items-center">
+                        👗 가상 옷장
+                    </h2>
+                    
+                    <div id="clothesList" class="grid grid-cols-2 gap-3 max-h-96 overflow-y-auto custom-scrollbar">
+                        <!-- 옷 목록이 여기에 동적으로 추가됩니다 -->
+                        <div class="text-center text-amber-600 col-span-2 py-8">
+                            <div class="text-3xl mb-2">👔</div>
+                            <div class="font-notebook">옷장을 불러오는 중...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 중앙: 캔버스 -->
+            <div class="lg:col-span-2">
+                <div class="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg p-6 border-2 border-amber-200">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-2xl font-handwrite font-semibold text-amber-800 flex items-center">
+                            ✨ 피팅룸
+                        </h2>
+                        
+                        <div class="flex gap-2">
+                            <button 
+                                id="clearCanvas" 
+                                class="bg-orange-500 hover:bg-orange-600 text-white py-2 px-4 rounded-lg font-notebook transition-colors"
+                            >
+                                🧹 초기화
+                            </button>
+                            <button 
+                                id="downloadImage" 
+                                class="bg-green-500 hover:bg-green-600 text-white py-2 px-4 rounded-lg font-notebook transition-colors"
+                            >
+                                💾 저장하기
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="flex justify-center">
+                        <div class="border-4 border-amber-300 rounded-xl overflow-hidden shadow-lg">
+                            <canvas 
+                                id="fittingCanvas" 
+                                width="500" 
+                                height="700"
+                                class="bg-gradient-to-b from-blue-50 to-blue-100"
+                            ></canvas>
+                        </div>
+                    </div>
+                    
+                    <!-- 캔버스 컨트롤 -->
+                    <div class="mt-4 text-center">
+                        <p class="text-sm text-amber-700 font-notebook">
+                            💡 팁: 옷을 드래그해서 이동하고, 모서리를 드래그해서 크기를 조절하세요!
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 하단 설명 -->
+        <footer class="mt-8 text-center">
+            <div class="bg-white/60 backdrop-blur-sm rounded-xl p-4 border border-amber-200">
+                <p class="text-sm text-amber-700 font-notebook">
+                    🎨 가상 피팅룸에서 다양한 옷을 입어보고 나만의 스타일을 찾아보세요!
+                </p>
+            </div>
+        </footer>
+    </div>
+
+    <!-- JavaScript -->
+    <script src="js/app.js"></script>
+</body>
+</html>
