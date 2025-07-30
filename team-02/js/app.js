@@ -29,26 +29,27 @@ class VirtualFittingRoom {
     // Fabric.js 캔버스 초기화
     initCanvas() {
         this.canvas = new fabric.Canvas('fittingCanvas', {
-            backgroundColor: 'linear-gradient(135deg, #e0f2fe 0%, #b3e5fc 100%)',
+            backgroundColor: '#ffffff',
             selection: true,
             preserveObjectStacking: true
         });
 
         // 캔버스 기본 설정
         this.canvas.setDimensions({
-            width: 500,
+            width: 600,
             height: 700
         });
 
-        // 객체 선택 시 컨트롤 스타일 설정
+        // 객체 선택 시 컨트롤 스타일 설정 (모던한 블루 테마)
         fabric.Object.prototype.set({
             transparentCorners: false,
-            cornerColor: '#ff6b6b',
-            cornerStrokeColor: '#ff5252',
-            borderColor: '#ff5252',
-            cornerSize: 12,
-            padding: 5,
-            cornerStyle: 'circle'
+            cornerColor: '#3b82f6',
+            cornerStrokeColor: '#1d4ed8',
+            borderColor: '#3b82f6',
+            cornerSize: 10,
+            padding: 8,
+            cornerStyle: 'circle',
+            borderDashArray: [5, 5]
         });
     }
 
@@ -58,9 +59,25 @@ class VirtualFittingRoom {
         const photoUpload = document.getElementById('photoUpload');
         photoUpload.addEventListener('change', (e) => this.handlePhotoUpload(e));
 
+        // 옷 업로드
+        const clothUpload = document.getElementById('clothUpload');
+        clothUpload.addEventListener('change', (e) => this.handleClothUpload(e));
+
+        // 탭 전환
+        const catalogTab = document.getElementById('catalogTab');
+        const uploadTab = document.getElementById('uploadTab');
+        catalogTab.addEventListener('click', () => this.switchTab('catalog'));
+        uploadTab.addEventListener('click', () => this.switchTab('upload'));
+
         // 배경 제거 버튼
         const removeBackground = document.getElementById('removeBackground');
         removeBackground.addEventListener('click', () => this.removeBackground());
+
+        // 레이어 관리 버튼들
+        const bringToFront = document.getElementById('bringToFront');
+        const sendToBack = document.getElementById('sendToBack');
+        bringToFront.addEventListener('click', () => this.bringToFront());
+        sendToBack.addEventListener('click', () => this.sendToBack());
 
         // 캔버스 초기화 버튼
         const clearCanvas = document.getElementById('clearCanvas');
@@ -73,18 +90,32 @@ class VirtualFittingRoom {
         // 캔버스 객체 이벤트
         this.canvas.on('object:added', () => this.updateCanvasState());
         this.canvas.on('object:removed', () => this.updateCanvasState());
+        this.canvas.on('selection:created', () => this.updateLayerButtons());
+        this.canvas.on('selection:updated', () => this.updateLayerButtons());
+        this.canvas.on('selection:cleared', () => this.updateLayerButtons());
     }
 
     // 옷 데이터 로드
     async loadClothesData() {
         try {
-            const response = await fetch('clothes.json');
+            console.log('옷 데이터 로드 시작...');
+            const response = await fetch('./clothes.json');
+            console.log('Response status:', response.status);
+            
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
+            
             const data = await response.json();
-            this.clothesData = data.clothes;
-            this.renderClothesGrid();
+            console.log('로드된 데이터:', data);
+            
+            if (data && data.clothes && Array.isArray(data.clothes)) {
+                this.clothesData = data.clothes;
+                console.log('옷 데이터 로드 완료:', this.clothesData.length, '개 아이템');
+                this.renderClothesGrid();
+            } else {
+                throw new Error('Invalid data format');
+            }
         } catch (error) {
             console.error('옷 데이터 로드 실패:', error);
             this.renderClothesError();
@@ -94,47 +125,64 @@ class VirtualFittingRoom {
     // 옷 목록 렌더링
     renderClothesGrid() {
         const clothesList = document.getElementById('clothesList');
+        console.log('옷 목록 렌더링 시작, 아이템 수:', this.clothesData.length);
+        
+        if (!clothesList) {
+            console.error('clothesList 요소를 찾을 수 없습니다.');
+            return;
+        }
         
         if (this.clothesData.length === 0) {
             clothesList.innerHTML = `
-                <div class="text-center text-amber-600 col-span-2 py-8">
-                    <div class="text-3xl mb-2">😅</div>
-                    <div class="font-notebook">옷장이 비어있습니다.</div>
+                <div class="text-center text-gray-500 col-span-2 py-8">
+                    <svg class="w-12 h-12 mx-auto mb-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                    </svg>
+                    <div class="text-sm">옷장이 비어있습니다.</div>
                 </div>
             `;
             return;
         }
 
-        clothesList.innerHTML = this.clothesData.map(cloth => `
-            <div class="cloth-item group" data-cloth-id="${cloth.id}">
-                <div class="aspect-square bg-gray-100 rounded-lg mb-2 overflow-hidden flex items-center justify-center">
-                    <img 
-                        src="${cloth.image}" 
-                        alt="${cloth.name}"
-                        class="max-w-full max-h-full object-contain transition-transform group-hover:scale-110"
-                        onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
-                    >
-                    <div class="hidden flex-col items-center justify-center text-gray-400">
-                        <div class="text-2xl mb-1">👕</div>
-                        <div class="text-xs">이미지 없음</div>
+        clothesList.innerHTML = this.clothesData.map(cloth => {
+            console.log('렌더링 중인 옷:', cloth);
+            return `
+                <div class="cloth-item group bg-white rounded-lg p-3 border border-gray-200 hover:border-blue-300 cursor-pointer transition-all duration-200 transform hover:scale-105 hover:shadow-md" data-cloth-id="${cloth.id}">
+                    <div class="aspect-square bg-gray-50 rounded-lg mb-3 overflow-hidden flex items-center justify-center">
+                        <img 
+                            src="${cloth.image}" 
+                            alt="${cloth.name}"
+                            class="max-w-full max-h-full object-contain transition-transform group-hover:scale-110"
+                            onload="console.log('이미지 로드 성공:', '${cloth.image}')"
+                            onerror="console.error('이미지 로드 실패:', '${cloth.image}'); this.style.display='none'; this.nextElementSibling.style.display='flex';"
+                        >
+                        <div class="hidden flex-col items-center justify-center text-gray-300">
+                            <svg class="w-8 h-8 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                            </svg>
+                            <div class="text-xs">이미지 없음</div>
+                        </div>
+                    </div>
+                    <div class="text-center">
+                        <div class="font-medium text-sm text-gray-900 truncate mb-1" title="${cloth.name}">
+                            ${cloth.name}
+                        </div>
+                        <div class="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full inline-block">
+                            ${cloth.category}
+                        </div>
                     </div>
                 </div>
-                <div class="text-center">
-                    <div class="font-semibold text-sm text-gray-800 truncate" title="${cloth.name}">
-                        ${cloth.name}
-                    </div>
-                    <div class="text-xs text-gray-600 mt-1">
-                        ${cloth.category}
-                    </div>
-                </div>
-            </div>
-        `).join('');
+            `;
+        }).join('');
+
+        console.log('옷 목록 HTML 생성 완료');
 
         // 옷 아이템 클릭 이벤트 등록
         clothesList.addEventListener('click', (e) => {
             const clothItem = e.target.closest('.cloth-item');
             if (clothItem) {
                 const clothId = clothItem.dataset.clothId;
+                console.log('선택된 옷 ID:', clothId);
                 this.addClothToCanvas(clothId);
             }
         });
@@ -144,12 +192,14 @@ class VirtualFittingRoom {
     renderClothesError() {
         const clothesList = document.getElementById('clothesList');
         clothesList.innerHTML = `
-            <div class="text-center text-red-600 col-span-2 py-8">
-                <div class="text-3xl mb-2">😰</div>
-                <div class="font-notebook">옷 데이터를 불러올 수 없습니다.</div>
+            <div class="text-center text-red-500 col-span-2 py-8">
+                <svg class="w-12 h-12 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-2.694-.833-3.464 0L3.35 16.5c-.77.833.192 2.5 1.732 2.5z"/>
+                </svg>
+                <div class="text-sm mb-3">옷 데이터를 불러올 수 없습니다.</div>
                 <button 
                     onclick="location.reload()" 
-                    class="mt-2 px-4 py-2 bg-red-500 text-white rounded-lg text-sm hover:bg-red-600 transition-colors"
+                    class="px-4 py-2 bg-blue-500 text-white rounded-lg text-sm hover:bg-blue-600 transition-colors"
                 >
                     다시 시도
                 </button>
@@ -182,6 +232,137 @@ class VirtualFittingRoom {
             this.showError('파일을 읽는 중 오류가 발생했습니다.');
         };
         reader.readAsDataURL(file);
+    }
+
+    // 옷 이미지 업로드 처리
+    handleClothUpload(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        // 파일 타입 검증
+        if (!file.type.startsWith('image/')) {
+            this.showError('이미지 파일만 업로드할 수 있습니다.');
+            return;
+        }
+
+        // 파일 크기 검증 (5MB 제한)
+        if (file.size > 5 * 1024 * 1024) {
+            this.showError('파일 크기가 너무 큽니다. (최대 5MB)');
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            this.addUserClothToCanvas(e.target.result, file.name);
+        };
+        reader.onerror = () => {
+            this.showError('파일을 읽는 중 오류가 발생했습니다.');
+        };
+        reader.readAsDataURL(file);
+    }
+
+    // 탭 전환
+    switchTab(tabName) {
+        const catalogTab = document.getElementById('catalogTab');
+        const uploadTab = document.getElementById('uploadTab');
+        const catalogView = document.getElementById('catalogView');
+        const uploadView = document.getElementById('uploadView');
+
+        if (tabName === 'catalog') {
+            catalogTab.className = 'flex-1 py-2 px-3 text-sm font-medium rounded-md transition-all bg-white text-blue-600 shadow-sm';
+            uploadTab.className = 'flex-1 py-2 px-3 text-sm font-medium rounded-md transition-all text-gray-600 hover:text-gray-900';
+            catalogView.classList.remove('hidden');
+            uploadView.classList.add('hidden');
+        } else {
+            uploadTab.className = 'flex-1 py-2 px-3 text-sm font-medium rounded-md transition-all bg-white text-blue-600 shadow-sm';
+            catalogTab.className = 'flex-1 py-2 px-3 text-sm font-medium rounded-md transition-all text-gray-600 hover:text-gray-900';
+            uploadView.classList.remove('hidden');
+            catalogView.classList.add('hidden');
+        }
+    }
+
+    // 사용자 업로드 옷을 캔버스에 추가
+    addUserClothToCanvas(imageUrl, fileName) {
+        this.showLoading(`${fileName} 처리 중...`);
+
+        fabric.Image.fromURL(imageUrl, (img) => {
+            if (!img.getElement()) {
+                this.hideLoading();
+                this.showError('이미지를 불러올 수 없습니다.');
+                return;
+            }
+
+            // 적절한 크기로 조정 (최대 200px)
+            const maxSize = 200;
+            const scale = Math.min(maxSize / img.width, maxSize / img.height);
+            
+            img.set({
+                left: Math.random() * (this.canvas.width - img.width * scale),
+                top: Math.random() * (this.canvas.height - img.height * scale),
+                scaleX: scale,
+                scaleY: scale,
+                selectable: true,
+                evented: true,
+                hasControls: true,
+                hasBorders: true,
+                transparentCorners: false
+            });
+
+            // 사용자 업로드 정보 저장
+            img.clothInfo = {
+                id: 'user_' + Date.now(),
+                name: fileName.replace(/\.[^/.]+$/, ""), // 확장자 제거
+                category: '사용자 업로드',
+                isUserUpload: true
+            };
+
+            this.canvas.add(img);
+            this.canvas.setActiveObject(img);
+            this.canvas.renderAll();
+
+            this.hideLoading();
+            this.showSuccess(`${fileName}이(가) 추가되었습니다!`);
+        }, {
+            crossOrigin: 'anonymous'
+        });
+    }
+
+    // 레이어 버튼 상태 업데이트
+    updateLayerButtons() {
+        const activeObject = this.canvas.getActiveObject();
+        const bringToFront = document.getElementById('bringToFront');
+        const sendToBack = document.getElementById('sendToBack');
+        
+        if (activeObject && activeObject !== this.backgroundImage) {
+            bringToFront.disabled = false;
+            sendToBack.disabled = false;
+        } else {
+            bringToFront.disabled = true;
+            sendToBack.disabled = true;
+        }
+    }
+
+    // 선택된 객체를 맨 앞으로
+    bringToFront() {
+        const activeObject = this.canvas.getActiveObject();
+        if (activeObject && activeObject !== this.backgroundImage) {
+            this.canvas.bringToFront(activeObject);
+            this.canvas.renderAll();
+            this.showSuccess('선택된 옷을 맨 앞으로 이동했습니다.');
+        }
+    }
+
+    // 선택된 객체를 맨 뒤로 (배경 이미지 위)
+    sendToBack() {
+        const activeObject = this.canvas.getActiveObject();
+        if (activeObject && activeObject !== this.backgroundImage) {
+            this.canvas.sendToBack(activeObject);
+            if (this.backgroundImage) {
+                this.canvas.sendToBack(this.backgroundImage);
+            }
+            this.canvas.renderAll();
+            this.showSuccess('선택된 옷을 맨 뒤로 이동했습니다.');
+        }
     }
 
     // 배경 이미지 설정
@@ -354,7 +535,7 @@ class VirtualFittingRoom {
         }
 
         const toast = document.createElement('div');
-        toast.className = `toast-notification fixed top-4 right-4 px-6 py-4 rounded-lg shadow-lg z-50 font-notebook transform transition-all duration-300 translate-x-full`;
+        toast.className = `toast-notification fixed top-6 right-6 px-6 py-4 rounded-lg shadow-lg z-50 font-inter transform transition-all duration-300 translate-x-full max-w-sm`;
         
         // 타입별 스타일 설정
         const styles = {
@@ -363,8 +544,19 @@ class VirtualFittingRoom {
             info: 'bg-blue-500 text-white'
         };
         
+        const icons = {
+            success: `<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>`,
+            error: `<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>`,
+            info: `<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>`
+        };
+        
         toast.className += ` ${styles[type] || styles.info}`;
-        toast.textContent = message;
+        toast.innerHTML = `
+            <div class="flex items-center">
+                ${icons[type] || icons.info}
+                <span class="text-sm font-medium">${message}</span>
+            </div>
+        `;
         
         document.body.appendChild(toast);
         
@@ -373,7 +565,7 @@ class VirtualFittingRoom {
             toast.classList.remove('translate-x-full');
         }, 100);
         
-        // 3초 후 자동 제거
+        // 4초 후 자동 제거
         setTimeout(() => {
             toast.classList.add('translate-x-full');
             setTimeout(() => {
@@ -381,18 +573,18 @@ class VirtualFittingRoom {
                     toast.parentNode.removeChild(toast);
                 }
             }, 300);
-        }, 3000);
+        }, 4000);
     }
 
     // 로딩 표시
-    showLoading(message = '로딩 중...') {
+    showLoading(message = '처리 중...') {
         const loading = document.createElement('div');
         loading.id = 'loadingOverlay';
         loading.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
         loading.innerHTML = `
-            <div class="bg-white rounded-lg p-6 text-center font-notebook">
-                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-600 mx-auto mb-4"></div>
-                <div class="text-amber-800">${message}</div>
+            <div class="bg-white rounded-xl p-8 text-center font-inter shadow-2xl">
+                <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-500 mx-auto mb-4"></div>
+                <div class="text-gray-700 font-medium">${message}</div>
             </div>
         `;
         document.body.appendChild(loading);
@@ -451,7 +643,7 @@ window.addEventListener('resize', () => {
         if (window.innerWidth < 768) {
             const container = document.querySelector('#fittingCanvas').parentElement;
             const containerWidth = container.clientWidth - 32; // 패딩 고려
-            const scale = Math.min(containerWidth / 500, 1);
+            const scale = Math.min(containerWidth / 600, 1);
             
             window.fittingRoom.canvas.setZoom(scale);
         } else {
